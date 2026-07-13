@@ -11,11 +11,6 @@ import {
 
 const errors = [];
 const catalog = await readCatalog();
-const approval = await readJson(path.join(rootDirectory, "config", "approval.json"));
-
-if (approval.emailSend.status !== "pending") {
-  errors.push("config/approval.json: emailSend must remain pending until explicit admin approval");
-}
 
 for (const entry of catalog) {
   const htmlSource = await readFile(path.join(templatesDirectory, entry.html), "utf8");
@@ -39,7 +34,8 @@ for (const entry of catalog) {
 const trackedFiles = [
   "README.md",
   ".env.example",
-  "config/approval.json",
+  "package.json",
+  "scripts/sync-mailersend-templates.mjs",
   "src/templates/catalog.json",
 ];
 for (const file of trackedFiles) {
@@ -49,10 +45,23 @@ for (const file of trackedFiles) {
   }
 }
 
+const packageJson = await readJson(path.join(rootDirectory, "package.json"));
+if (Object.keys(packageJson.scripts ?? {}).some((name) => /send/i.test(name))) {
+  errors.push("package.json: email sending commands are not allowed in this project");
+}
+
+const syncScript = await readFile(
+  path.join(rootDirectory, "scripts", "sync-mailersend-templates.mjs"),
+  "utf8",
+);
+if (/\/v1\/email\b/.test(syncScript)) {
+  errors.push("scripts/sync-mailersend-templates.mjs: email sending endpoint is not allowed");
+}
+
 if (errors.length > 0) {
   console.error(errors.map((error) => `- ${error}`).join("\n"));
   process.exit(1);
 }
 
 console.log(`validated ${catalog.length} templates`);
-console.log("email sending gate: pending");
+console.log("email sending: not implemented");
