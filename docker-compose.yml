@@ -1,0 +1,106 @@
+name: avila-newsletters
+
+services:
+  platform-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: avila_newsletters
+      POSTGRES_USER: newsletters
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:-local-newsletters-password}
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newsletters -d avila_newsletters"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - platform-data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-change-this-before-shared-use}
+      DELIVERY_ENABLED: "false"
+      LISTMONK_BASE_URL: http://listmonk:9000
+      LISTMONK_API_USER: ${LISTMONK_API_USER:-avila-control-plane}
+      LISTMONK_API_TOKEN: ${LISTMONK_API_TOKEN:-}
+      LISTMONK_TEMPLATE_ID: ${LISTMONK_TEMPLATE_ID:-1}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      platform-db:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["sh", "-c", "pnpm db:migrate && pnpm worker"]
+    environment:
+      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
+      DELIVERY_ENABLED: ${DELIVERY_ENABLED:-false}
+      LISTMONK_BASE_URL: http://listmonk:9000
+      LISTMONK_API_USER: ${LISTMONK_API_USER:-avila-control-plane}
+      LISTMONK_API_TOKEN: ${LISTMONK_API_TOKEN:-}
+      LISTMONK_TEMPLATE_ID: ${LISTMONK_TEMPLATE_ID:-1}
+      WORKER_POLL_MS: ${WORKER_POLL_MS:-5000}
+      WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:-300000}
+    depends_on:
+      platform-db:
+        condition: service_healthy
+      listmonk:
+        condition: service_started
+
+  listmonk-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: listmonk
+      POSTGRES_USER: listmonk
+      POSTGRES_PASSWORD: ${LISTMONK_DB_PASSWORD:-local-listmonk-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk -d listmonk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - listmonk-data:/var/lib/postgresql/data
+
+  listmonk:
+    image: listmonk/listmonk:v6.1.0
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - ./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''
+    environment:
+      LISTMONK_app__address: 0.0.0.0:9000
+      LISTMONK_db__host: listmonk-db
+      LISTMONK_db__port: 5432
+      LISTMONK_db__user: listmonk
+      LISTMONK_db__password: ${LISTMONK_DB_PASSWORD:-local-listmonk-password}
+      LISTMONK_db__database: listmonk
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_db__max_open: 25
+      LISTMONK_db__max_idle: 25
+      LISTMONK_db__max_lifetime: 300s
+      LISTMONK_ADMIN_USER: ${LISTMONK_ADMIN_USER:-admin}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_ADMIN_PASSWORD:-change-this-before-shared-use}
+      TZ: America/Sao_Paulo
+    ports:
+      - "127.0.0.1:9000:9000"
+    depends_on:
+      listmonk-db:
+        condition: service_healthy
+    volumes:
+      - listmonk-uploads:/listmonk/uploads
+
+volumes:
+  platform-data:
+  listmonk-data:
+  listmonk-uploads:

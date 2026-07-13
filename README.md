@@ -48,3 +48,17 @@ O assunto de cada mensagem está documentado em `src/templates/catalog.json`, ma
 Não há implementação nem comando para `POST /v1/email` neste repositório. Um eventual envio deve ser acrescentado em um worker separado, com outra credencial, somente depois de aprovação da conta, aprovação administrativa do envio, hash do conteúdo e lista congelada de destinatários.
 
 Guarde tokens somente em variáveis de ambiente ou no `.env` local ignorado pelo Git. Nunca os coloque em código, dados de exemplo ou arquivos versionados.
+
+## Painel de aprovação e deploy
+
+O painel operacional exige autenticação administrativa e aplica o fluxo:
+
+```text
+rascunho -> em revisão -> aprovado -> fila
+```
+
+Uma edição posterior invalida automaticamente a aprovação e o hash aprovado.
+O arquivo `render.yaml` publica somente o painel/API e o PostgreSQL, com
+`DELIVERY_ENABLED=false`. Assim, a revisão humana pode operar em produção sem
+habilitar qualquer disparo. O worker de entrega deve ser publicado somente
+depois que o webhook autenticado do n8n estiver configurado e validado.
