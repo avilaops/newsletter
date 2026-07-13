@@ -19,7 +19,7 @@ export const CAMPAIGN_STATUS = Object.freeze({
 });
 
 // Delivery is deliberately independent from editorial approval. In particular,
-// accepting a dispatch in listmonk is DISPATCHED, never SENT. SENT is reserved
+// Accepting a dispatch in n8n is DISPATCHED, never SENT. SENT is reserved
 // for a later reconciliation with external delivery evidence.
 export const DELIVERY_STATUS = Object.freeze({
   QUEUED: "queued",

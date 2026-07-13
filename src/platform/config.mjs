@@ -6,10 +6,9 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   ADMIN_API_TOKEN: z.string().optional(),
   DELIVERY_ENABLED: z.enum(["true", "false"]).default("false"),
-  LISTMONK_BASE_URL: z.url().default("http://127.0.0.1:9000"),
-  LISTMONK_API_USER: z.string().min(1).default("avila-control-plane"),
-  LISTMONK_API_TOKEN: z.string().default(""),
-  LISTMONK_TEMPLATE_ID: z.coerce.number().int().positive().default(1),
+  N8N_DELIVERY_WEBHOOK_URL: z.string().default(""),
+  N8N_WEBHOOK_SECRET: z.string().default(""),
+  N8N_INGEST_TOKEN: z.string().default(""),
   WORKER_POLL_MS: z.coerce.number().int().min(250).default(5000),
   WORKER_LOCK_TIMEOUT_MS: z.coerce.number().int().min(1000).default(300_000),
 });

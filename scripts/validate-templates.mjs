@@ -64,4 +64,4 @@ if (errors.length > 0) {
 }
 
 console.log(`validated ${catalog.length} templates`);
-console.log("email sending: not implemented");
+console.log("direct email sending: disabled (delivery is delegated to approved n8n workflow)");

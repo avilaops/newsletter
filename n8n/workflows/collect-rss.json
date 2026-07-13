@@ -1,0 +1,68 @@
+{
+  "id": "avilaCollectRss01",
+  "name": "Ávila Ops - Coleta RSS",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 30 }] } },
+      "id": "schedule",
+      "name": "A cada 30 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.PLATFORM_API_URL + '/api/ingest/sources' }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.N8N_INGEST_TOKEN }}" }] },
+        "options": {}
+      },
+      "id": "sources",
+      "name": "Carregar fontes ativas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "data", "options": {} },
+      "id": "split-sources",
+      "name": "Uma fonte por vez",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": { "url": "={{ $json.url }}" },
+      "id": "rss",
+      "name": "Ler RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PLATFORM_API_URL + '/api/ingest/articles' }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "={{ 'Bearer ' + $env.N8N_INGEST_TOKEN }}" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sourceId: $('Uma fonte por vez').item.json.id, externalKey: $json.guid || $json.link, title: $json.title, summary: $json.contentSnippet || $json.content || '', body: $json.content || $json.contentSnippet || $json.title, sourceUrl: $json.link, publishedAt: $json.isoDate || null, category: $('Uma fonte por vez').item.json.category, metadata: { creator: $json.creator || null } } }}",
+        "options": {}
+      },
+      "id": "ingest",
+      "name": "Salvar artigo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 0]
+    }
+  ],
+  "connections": {
+    "A cada 30 minutos": { "main": [[{ "node": "Carregar fontes ativas", "type": "main", "index": 0 }]] },
+    "Carregar fontes ativas": { "main": [[{ "node": "Uma fonte por vez", "type": "main", "index": 0 }]] },
+    "Uma fonte por vez": { "main": [[{ "node": "Ler RSS", "type": "main", "index": 0 }]] },
+    "Ler RSS": { "main": [[{ "node": "Salvar artigo", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

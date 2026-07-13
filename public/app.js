@@ -61,6 +61,9 @@ const ACTIONS = {
 
 const state = {
   campaigns: [],
+  sources: [],
+  articles: [],
+  audiences: [],
   filter: "all",
   currentAction: null,
   currentCampaignId: null,
@@ -104,7 +107,32 @@ const elements = {
   sessionToken: document.querySelector("#session-token"),
   sessionStatus: document.querySelector("#session-status"),
   openCreate: document.querySelector("#open-create"),
+  sourceList: document.querySelector("#source-list"),
+  articleList: document.querySelector("#article-list"),
+  articleCount: document.querySelector("#article-count"),
+  audienceList: document.querySelector("#audience-list"),
+  sourceDialog: document.querySelector("#source-dialog"),
+  sourceForm: document.querySelector("#source-form"),
+  sourceError: document.querySelector("#source-error"),
+  audienceDialog: document.querySelector("#audience-dialog"),
+  audienceForm: document.querySelector("#audience-form"),
+  audienceError: document.querySelector("#audience-error"),
+  campaignAudiences: document.querySelector("#campaign-audiences"),
+  campaignArticles: document.querySelector("#campaign-articles"),
+  previewDialog: document.querySelector("#preview-dialog"),
+  previewFrame: document.querySelector("#preview-frame"),
+  previewTitle: document.querySelector("#preview-title"),
+  previewSubject: document.querySelector("#preview-subject"),
 };
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function statusInfo(status) {
   const key = String(status || "draft").trim().toLowerCase();
@@ -196,6 +224,66 @@ async function loadHealth() {
     elements.deliveryTitle.textContent = "Não foi possível confirmar a trava";
     elements.deliveryCopy.textContent = `${errorMessage(error, "Falha ao consultar o serviço.")} Considere a entrega bloqueada até nova verificação.`;
     setHidden(elements.retryHealth, false);
+  }
+}
+
+function renderSources() {
+  elements.sourceList.replaceChildren();
+  if (!state.sources.length) {
+    elements.sourceList.innerHTML = '<p class="muted-copy">Nenhuma fonte cadastrada.</p>';
+    return;
+  }
+  for (const source of state.sources) {
+    const item = document.createElement("div");
+    item.className = "compact-item";
+    item.innerHTML = `<span class="source-kind">${escapeHtml(source.type).toUpperCase()}</span><div><strong>${escapeHtml(source.name)}</strong><small>${escapeHtml(source.category)} · ${source.active ? "ativa" : "pausada"}</small></div><span class="item-state ${source.active ? "is-on" : ""}">${source.active ? "Coletando" : "Pausada"}</span>`;
+    elements.sourceList.append(item);
+  }
+}
+
+function renderArticles() {
+  elements.articleList.replaceChildren();
+  elements.articleCount.textContent = `${state.articles.length} ${state.articles.length === 1 ? "item" : "itens"}`;
+  if (!state.articles.length) {
+    elements.articleList.innerHTML = '<p class="muted-copy">Aguardando a primeira coleta do n8n.</p>';
+    return;
+  }
+  for (const article of state.articles.slice(0, 8)) {
+    const item = document.createElement("div");
+    item.className = "compact-item article-item";
+    item.innerHTML = `<div><strong>${escapeHtml(article.title)}</strong><small>${escapeHtml(article.category)} · ${formatDate(article.publishedAt)}</small></div><span class="item-state">Disponível</span>`;
+    elements.articleList.append(item);
+  }
+}
+
+function renderAudiences() {
+  elements.audienceList.replaceChildren();
+  if (!state.audiences.length) {
+    elements.audienceList.innerHTML = '<p class="muted-copy">Nenhuma audiência configurada.</p>';
+    return;
+  }
+  for (const audience of state.audiences) {
+    const item = document.createElement("div");
+    item.className = "compact-item";
+    item.innerHTML = `<div><strong>${escapeHtml(audience.name)}</strong><small>${escapeHtml(audience.description || "Sem descrição")}</small></div><span class="count-pill">${Number(audience.recipientCount).toLocaleString("pt-BR")} contatos</span>`;
+    elements.audienceList.append(item);
+  }
+}
+
+async function loadWorkspace() {
+  if (!state.token) return;
+  try {
+    const [sources, articles, audiences] = await Promise.all([
+      api("/sources"), api("/articles"), api("/audiences"),
+    ]);
+    state.sources = sources.data ?? [];
+    state.articles = articles.data ?? [];
+    state.audiences = audiences.data ?? [];
+    renderSources();
+    renderArticles();
+    renderAudiences();
+  } catch (error) {
+    notify(errorMessage(error, "Não foi possível carregar a configuração."), "error");
   }
 }
 
@@ -327,6 +415,7 @@ function campaignCard(campaign) {
 
   const actions = document.createElement("div");
   actions.className = "campaign-actions";
+  actions.append(actionButton("Pré-visualizar", "preview", "secondary"));
   if (info.group === "draft") {
     actions.append(actionButton("Submeter revisão", "submit", "primary"));
   } else if (info.group === "review") {
@@ -377,6 +466,22 @@ function renderCampaigns() {
 function openCreate() {
   elements.createForm.reset();
   setHidden(elements.createError, true);
+  elements.campaignAudiences.replaceChildren();
+  elements.campaignArticles.replaceChildren();
+  for (const audience of state.audiences.filter((item) => item.active)) {
+    const label = document.createElement("label");
+    label.className = "choice-card";
+    label.innerHTML = `<input type="checkbox" name="audienceListIds" value="${audience.id}"><span><strong>${escapeHtml(audience.name)}</strong><small>${Number(audience.recipientCount).toLocaleString("pt-BR")} contatos</small></span>`;
+    elements.campaignAudiences.append(label);
+  }
+  if (!state.audiences.length) elements.campaignAudiences.innerHTML = '<p class="muted-copy">Cadastre uma audiência antes de criar a campanha.</p>';
+  for (const article of state.articles) {
+    const label = document.createElement("label");
+    label.className = "article-choice";
+    label.innerHTML = `<input type="checkbox" name="articleIds" value="${article.id}"><span><strong>${escapeHtml(article.title)}</strong><small>${escapeHtml(article.summary || article.category)}</small></span>`;
+    elements.campaignArticles.append(label);
+  }
+  if (!state.articles.length) elements.campaignArticles.innerHTML = '<p class="muted-copy">Ainda não há notícias coletadas.</p>';
   elements.createDialog.showModal();
   window.setTimeout(() => document.querySelector("#campaign-name").focus(), 0);
 }
@@ -387,23 +492,30 @@ async function submitCreate(event) {
   if (!elements.createForm.reportValidity()) return;
 
   const data = new FormData(elements.createForm);
-  const audienceListIds = String(data.get("audienceListIds") || "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .map(Number);
+  const audienceListIds = data.getAll("audienceListIds").map(Number);
+  const articleIds = data.getAll("articleIds").map(String);
 
   if (!audienceListIds.length || audienceListIds.some((id) => !Number.isInteger(id) || id <= 0)) {
-    elements.createError.textContent = "Informe ao menos um ID numérico positivo de lista de audiência.";
+    elements.createError.textContent = "Selecione ao menos uma audiência.";
     setHidden(elements.createError, false);
     return;
   }
+  if (!articleIds.length) {
+    elements.createError.textContent = "Selecione ao menos uma notícia para a edição.";
+    setHidden(elements.createError, false);
+    return;
+  }
+
+  const selectedArticles = articleIds.map((id) => state.articles.find((article) => article.id === id)).filter(Boolean);
+  const intro = String(data.get("intro") || "").trim();
+  const articleMarkup = selectedArticles.map((article) => `<article style="margin:0 0 28px"><h2 style="margin:0 0 8px;font-size:22px">${escapeHtml(article.title)}</h2><p style="color:#475467;line-height:1.6">${escapeHtml(article.summary || article.body)}</p>${article.sourceUrl ? `<p><a href="${escapeHtml(article.sourceUrl)}">Ler na fonte</a></p>` : ""}</article>`).join("");
+  const htmlContent = `<!doctype html><html><body style="margin:0;background:#f3f6f5;font-family:Arial,sans-serif;color:#17202a"><main style="max-width:640px;margin:auto;background:#fff;padding:40px">${intro ? `<p style="font-size:17px;line-height:1.7">${escapeHtml(intro)}</p>` : ""}${articleMarkup}</main></body></html>`;
 
   const payload = {
     name: String(data.get("name") || "").trim(),
     subject: String(data.get("subject") || "").trim(),
     previewText: String(data.get("previewText") || "").trim(),
-    htmlContent: String(data.get("htmlContent") || "").trim(),
+    htmlContent,
     audienceListIds,
   };
 
@@ -474,7 +586,17 @@ elements.filter.addEventListener("change", (event) => {
 elements.list.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   const card = button?.closest("[data-campaign-id]");
-  if (button && card) openAction(button.dataset.action, card.dataset.campaignId);
+  if (!button || !card) return;
+  if (button.dataset.action === "preview") {
+    const campaign = state.campaigns.find((item) => String(item.id) === card.dataset.campaignId);
+    if (!campaign) return;
+    elements.previewTitle.textContent = campaign.name;
+    elements.previewSubject.textContent = `Assunto: ${campaign.subject}`;
+    elements.previewFrame.srcdoc = campaign.htmlContent;
+    elements.previewDialog.showModal();
+    return;
+  }
+  openAction(button.dataset.action, card.dataset.campaignId);
 });
 document.querySelector("#open-create").addEventListener("click", openCreate);
 document.querySelector("#empty-create").addEventListener("click", openCreate);
@@ -482,6 +604,47 @@ document.querySelector("#retry-campaigns").addEventListener("click", loadCampaig
 elements.retryHealth.addEventListener("click", loadHealth);
 elements.createForm.addEventListener("submit", submitCreate);
 elements.actionForm.addEventListener("submit", submitAction);
+document.querySelector("#open-source").addEventListener("click", () => {
+  elements.sourceForm.reset();
+  setHidden(elements.sourceError, true);
+  elements.sourceDialog.showModal();
+});
+document.querySelector("#open-audience").addEventListener("click", () => {
+  elements.audienceForm.reset();
+  setHidden(elements.audienceError, true);
+  elements.audienceDialog.showModal();
+});
+elements.sourceForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!elements.sourceForm.reportValidity()) return;
+  const data = new FormData(elements.sourceForm);
+  try {
+    await api("/sources", { method: "POST", body: JSON.stringify(Object.fromEntries(data)) });
+    elements.sourceDialog.close();
+    notify("Fonte adicionada. O n8n poderá incluí-la na próxima coleta.");
+    await loadWorkspace();
+  } catch (error) {
+    elements.sourceError.textContent = errorMessage(error, "Não foi possível salvar a fonte.");
+    setHidden(elements.sourceError, false);
+  }
+});
+elements.audienceForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!elements.audienceForm.reportValidity()) return;
+  const data = new FormData(elements.audienceForm);
+  const payload = Object.fromEntries(data);
+  payload.emails = [...new Set(String(payload.emails || "").split(/[\n,;]+/).map((email) => email.trim().toLowerCase()).filter(Boolean))];
+  payload.recipientCount = payload.emails.length;
+  try {
+    await api("/audiences", { method: "POST", body: JSON.stringify(payload) });
+    elements.audienceDialog.close();
+    notify("Audiência criada.");
+    await loadWorkspace();
+  } catch (error) {
+    elements.audienceError.textContent = errorMessage(error, "Não foi possível salvar a audiência.");
+    setHidden(elements.audienceError, false);
+  }
+});
 elements.sessionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!elements.sessionForm.reportValidity()) return;
@@ -491,10 +654,13 @@ elements.sessionForm.addEventListener("submit", async (event) => {
   sessionStorage.setItem("avila.adminToken", state.token);
   elements.sessionStatus.textContent = `Sessão ativa: ${state.adminId}`;
   elements.openCreate.disabled = false;
-  await loadCampaigns();
+  await Promise.all([loadCampaigns(), loadWorkspace()]);
 });
 document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => elements.createDialog.close()));
 document.querySelectorAll("[data-close-action]").forEach((button) => button.addEventListener("click", () => elements.actionDialog.close()));
+document.querySelectorAll("[data-close-source]").forEach((button) => button.addEventListener("click", () => elements.sourceDialog.close()));
+document.querySelectorAll("[data-close-audience]").forEach((button) => button.addEventListener("click", () => elements.audienceDialog.close()));
+document.querySelectorAll("[data-close-preview]").forEach((button) => button.addEventListener("click", () => elements.previewDialog.close()));
 
 for (const dialog of [elements.createDialog, elements.actionDialog]) {
   dialog.addEventListener("click", (event) => {
@@ -508,4 +674,4 @@ elements.sessionAdmin.value = state.adminId;
 elements.sessionToken.value = state.token;
 elements.sessionStatus.textContent = state.token ? `Sessão ativa: ${state.adminId}` : "Sessão não configurada";
 elements.openCreate.disabled = !state.token;
-Promise.all([loadCampaigns(), loadHealth()]);
+Promise.all([loadCampaigns(), loadHealth(), loadWorkspace()]);

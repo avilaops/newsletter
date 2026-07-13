@@ -1,0 +1,9 @@
+FROM docker.io/n8nio/n8n:2.25.7
+
+USER root
+COPY --chown=node:node n8n/workflows /opt/avila/workflows
+COPY --chown=node:node scripts/start-n8n.sh /opt/avila/start-n8n.sh
+RUN chmod 0555 /opt/avila/start-n8n.sh
+USER node
+
+ENTRYPOINT ["tini", "--", "/opt/avila/start-n8n.sh"]

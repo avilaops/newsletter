@@ -32,6 +32,9 @@
             </svg>
             Campanhas
           </a>
+          <a class="nav-item" href="#fontes">Fontes</a>
+          <a class="nav-item" href="#conteudos">Conteúdos</a>
+          <a class="nav-item" href="#audiencias">Audiências</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -109,6 +112,32 @@
             <span class="metric-label">Na fila</span>
             <strong id="metric-queued">—</strong>
             <span class="metric-caption">aguardando entrega</span>
+          </article>
+        </section>
+
+        <section class="workspace-grid" aria-label="Configuração no-code">
+          <article id="fontes" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">1</span><h2>Fontes</h2><p>Onde o n8n deve buscar notícias.</p></div>
+              <button id="open-source" class="button button--secondary" type="button">Adicionar fonte</button>
+            </div>
+            <div id="source-list" class="compact-list"><p class="muted-copy">Configure a sessão para carregar as fontes.</p></div>
+          </article>
+
+          <article id="conteudos" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">2</span><h2>Conteúdos coletados</h2><p>Notícias disponíveis para compor a próxima edição.</p></div>
+              <span id="article-count" class="count-pill">0 itens</span>
+            </div>
+            <div id="article-list" class="compact-list"><p class="muted-copy">Aguardando a primeira coleta do n8n.</p></div>
+          </article>
+
+          <article id="audiencias" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">3</span><h2>Audiências</h2><p>Grupos que podem receber campanhas aprovadas.</p></div>
+              <button id="open-audience" class="button button--secondary" type="button">Nova audiência</button>
+            </div>
+            <div id="audience-list" class="compact-list"><p class="muted-copy">Nenhuma audiência configurada.</p></div>
           </article>
         </section>
 
@@ -190,14 +219,19 @@
 
           <div class="field">
             <label for="campaign-audiences">Listas de audiência <span aria-hidden="true">*</span></label>
-            <input id="campaign-audiences" name="audienceListIds" type="text" required inputmode="numeric" autocomplete="off" placeholder="3, 7" aria-describedby="audiences-help" />
-            <small id="audiences-help">Informe os IDs numéricos positivos, separados por vírgula.</small>
+            <div id="campaign-audiences" class="choice-grid" role="group" aria-describedby="audiences-help"></div>
+            <small id="audiences-help">Selecione ao menos uma audiência.</small>
           </div>
 
           <div class="field">
-            <label for="campaign-html">Conteúdo HTML <span aria-hidden="true">*</span></label>
-            <textarea id="campaign-html" name="htmlContent" rows="11" required spellcheck="false" placeholder="Cole aqui o HTML final da campanha"></textarea>
-            <small>O conteúdo será salvo como rascunho e ainda precisará de revisão.</small>
+            <label>Notícias desta edição <span aria-hidden="true">*</span></label>
+            <div id="campaign-articles" class="article-picker" role="group"></div>
+            <small>Selecione as notícias; a plataforma monta o e-mail automaticamente.</small>
+          </div>
+
+          <div class="field">
+            <label for="campaign-intro">Abertura editorial</label>
+            <textarea id="campaign-intro" name="intro" rows="4" maxlength="1200" placeholder="Contextualize brevemente os destaques da edição."></textarea>
           </div>
 
           <div id="create-error" class="inline-error is-hidden" role="alert"></div>
@@ -207,6 +241,34 @@
           <button class="button button--secondary" type="button" data-close-dialog>Cancelar</button>
           <button id="create-submit" class="button button--primary" type="submit">Salvar rascunho</button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog id="source-dialog" class="dialog" aria-labelledby="source-title">
+      <form id="source-form" method="dialog">
+        <div class="dialog-header"><div><p class="eyebrow">Coleta automática</p><h2 id="source-title">Adicionar fonte</h2></div><button class="icon-button" type="button" data-close-source aria-label="Fechar">×</button></div>
+        <div class="dialog-body">
+          <div class="field"><label>Nome</label><input name="name" required minlength="2" placeholder="Ex.: Mercado Livre Notícias" /></div>
+          <div class="form-grid"><div class="field"><label>Tipo</label><select name="type"><option value="rss">Feed RSS</option><option value="website">Site</option><option value="api">API</option></select></div><div class="field"><label>Categoria</label><input name="category" required value="geral" /></div></div>
+          <div class="field"><label>Endereço</label><input name="url" type="url" required placeholder="https://exemplo.com/feed.xml" /></div>
+          <p class="form-note">As fontes ativas são verificadas automaticamente a cada 30 minutos.</p>
+          <div id="source-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+        <div class="dialog-footer"><button class="button button--secondary" type="button" data-close-source>Cancelar</button><button class="button button--primary" type="submit">Salvar fonte</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="audience-dialog" class="dialog" aria-labelledby="audience-title">
+      <form id="audience-form" method="dialog">
+        <div class="dialog-header"><div><p class="eyebrow">Destinatários</p><h2 id="audience-title">Nova audiência</h2></div><button class="icon-button" type="button" data-close-audience aria-label="Fechar">×</button></div>
+        <div class="dialog-body">
+          <div class="field"><label>Nome</label><input name="name" required minlength="2" placeholder="Ex.: Clientes e parceiros" /></div>
+          <div class="field"><label>Descrição</label><textarea name="description" rows="3" maxlength="500"></textarea></div>
+          <div class="field"><label>E-mails</label><textarea name="emails" rows="6" required placeholder="um@exemplo.com&#10;outro@exemplo.com"></textarea><small>Um endereço por linha. Duplicados serão removidos.</small></div>
+          <div class="field"><label>Referência externa</label><input name="externalKey" placeholder="Opcional" /></div>
+          <div id="audience-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+        <div class="dialog-footer"><button class="button button--secondary" type="button" data-close-audience>Cancelar</button><button class="button button--primary" type="submit">Salvar audiência</button></div>
       </form>
     </dialog>
 
@@ -234,6 +296,17 @@
           <button id="action-submit" class="button button--primary" type="submit">Confirmar</button>
         </div>
       </form>
+    </dialog>
+
+    <dialog id="preview-dialog" class="dialog dialog--preview" aria-labelledby="preview-title">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Prévia segura</p><h2 id="preview-title">Revisar campanha</h2><p id="preview-subject" class="dialog-description"></p></div>
+        <button class="icon-button" type="button" data-close-preview aria-label="Fechar">×</button>
+      </div>
+      <div class="preview-shell">
+        <iframe id="preview-frame" title="Conteúdo renderizado da campanha" sandbox></iframe>
+      </div>
+      <div class="dialog-footer"><button class="button button--primary" type="button" data-close-preview>Concluir revisão visual</button></div>
     </dialog>
 
     <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>

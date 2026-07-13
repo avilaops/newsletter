@@ -1,23 +1,24 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { loadConfig } from "./config.mjs";
 import { createDatabase } from "./db.mjs";
-import { createListmonkClient } from "./delivery/listmonk.mjs";
+import { createN8nDeliveryClient } from "./delivery/n8n.mjs";
 import { createRepository } from "./repository.mjs";
 import { createDeliveryWorker } from "./worker.mjs";
 
 const config = loadConfig();
-if (config.DELIVERY_ENABLED === "true" && !config.LISTMONK_API_TOKEN) {
-  throw new Error("LISTMONK_API_TOKEN is required when DELIVERY_ENABLED=true");
+if (config.DELIVERY_ENABLED === "true" && (!config.N8N_DELIVERY_WEBHOOK_URL || !config.N8N_WEBHOOK_SECRET)) {
+  throw new Error("N8N_DELIVERY_WEBHOOK_URL and N8N_WEBHOOK_SECRET are required when DELIVERY_ENABLED=true");
 }
 const pool = createDatabase(config.DATABASE_URL);
 const { repository, outbox } = createRepository(pool, {
   dispatchLockTimeoutMs: config.WORKER_LOCK_TIMEOUT_MS,
 });
-const deliveryClient = createListmonkClient({
-  baseUrl: config.LISTMONK_BASE_URL,
-  username: config.LISTMONK_API_USER,
-  password: config.LISTMONK_API_TOKEN || "delivery-disabled",
-});
+const deliveryClient = config.DELIVERY_ENABLED === "true"
+  ? createN8nDeliveryClient({
+      webhookUrl: config.N8N_DELIVERY_WEBHOOK_URL,
+      secret: config.N8N_WEBHOOK_SECRET,
+    })
+  : null;
 const worker = createDeliveryWorker({ repository, outbox, deliveryClient, env: process.env });
 let stopping = false;
 

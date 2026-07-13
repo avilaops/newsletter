@@ -27,10 +27,7 @@ services:
       DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-change-this-before-shared-use}
       DELIVERY_ENABLED: "false"
-      LISTMONK_BASE_URL: http://listmonk:9000
-      LISTMONK_API_USER: ${LISTMONK_API_USER:-avila-control-plane}
-      LISTMONK_API_TOKEN: ${LISTMONK_API_TOKEN:-}
-      LISTMONK_TEMPLATE_ID: ${LISTMONK_TEMPLATE_ID:-1}
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -40,67 +37,61 @@ services:
   worker:
     build: .
     restart: unless-stopped
-    command: ["sh", "-c", "pnpm db:migrate && pnpm worker"]
+    command: ["sh", "-c", "node src/platform/migrate.mjs && node src/platform/run-worker.mjs"]
     environment:
       DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
       DELIVERY_ENABLED: ${DELIVERY_ENABLED:-false}
-      LISTMONK_BASE_URL: http://listmonk:9000
-      LISTMONK_API_USER: ${LISTMONK_API_USER:-avila-control-plane}
-      LISTMONK_API_TOKEN: ${LISTMONK_API_TOKEN:-}
-      LISTMONK_TEMPLATE_ID: ${LISTMONK_TEMPLATE_ID:-1}
+      N8N_DELIVERY_WEBHOOK_URL: http://n8n:5678/webhook/avila-newsletters-delivery
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
       WORKER_POLL_MS: ${WORKER_POLL_MS:-5000}
       WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:-300000}
     depends_on:
       platform-db:
         condition: service_healthy
-      listmonk:
+      n8n:
         condition: service_started
 
-  listmonk-db:
+  n8n-db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: listmonk
-      POSTGRES_USER: listmonk
-      POSTGRES_PASSWORD: ${LISTMONK_DB_PASSWORD:-local-listmonk-password}
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U listmonk -d listmonk"]
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
       interval: 5s
       timeout: 5s
       retries: 10
     volumes:
-      - listmonk-data:/var/lib/postgresql/data
+      - n8n-data:/var/lib/postgresql/data
 
-  listmonk:
-    image: listmonk/listmonk:v6.1.0
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
     restart: unless-stopped
-    command:
-      - sh
-      - -c
-      - ./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''
     environment:
-      LISTMONK_app__address: 0.0.0.0:9000
-      LISTMONK_db__host: listmonk-db
-      LISTMONK_db__port: 5432
-      LISTMONK_db__user: listmonk
-      LISTMONK_db__password: ${LISTMONK_DB_PASSWORD:-local-listmonk-password}
-      LISTMONK_db__database: listmonk
-      LISTMONK_db__ssl_mode: disable
-      LISTMONK_db__max_open: 25
-      LISTMONK_db__max_idle: 25
-      LISTMONK_db__max_lifetime: 300s
-      LISTMONK_ADMIN_USER: ${LISTMONK_ADMIN_USER:-admin}
-      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_ADMIN_PASSWORD:-change-this-before-shared-use}
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-this-local-encryption-key}
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
+      PLATFORM_API_URL: http://app:3000
+      SMTP_FROM_EMAIL: nicolas@avilaops.com
+      GENERIC_TIMEZONE: America/Sao_Paulo
       TZ: America/Sao_Paulo
+      N8N_SECURE_COOKIE: "false"
     ports:
-      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:5678:5678"
     depends_on:
-      listmonk-db:
+      n8n-db:
         condition: service_healthy
-    volumes:
-      - listmonk-uploads:/listmonk/uploads
 
 volumes:
   platform-data:
-  listmonk-data:
-  listmonk-uploads:
+  n8n-data:

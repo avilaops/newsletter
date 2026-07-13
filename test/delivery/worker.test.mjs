@@ -33,6 +33,10 @@ function harness({ campaign = approvedCampaign(), env = { DELIVERY_ENABLED: "tru
       events.push(["getCampaign", id]);
       return campaign;
     },
+    async getCampaignRecipients(id, hash) {
+      events.push(["getCampaignRecipients", id, hash]);
+      return ["reader@example.com"];
+    },
     async setRemoteCampaign(id, remoteId) {
       events.push(["setRemoteCampaign", id, remoteId]);
     },
@@ -50,13 +54,9 @@ function harness({ campaign = approvedCampaign(), env = { DELIVERY_ENABLED: "tru
     },
   };
   const deliveryClient = {
-    async createCampaign(payload) {
-      events.push(["createCampaign", payload]);
-      return { id: 91 };
-    },
-    async startCampaign(id) {
-      events.push(["startCampaign", id]);
-      return { id, status: "running" };
+    async dispatchCampaign(payload, options) {
+      events.push(["dispatchCampaign", payload, options]);
+      return { executionId: "exec-91" };
     },
   };
 
@@ -83,7 +83,7 @@ test("a campaign changed after approval is rejected before the delivery client",
 
   assert.equal(result.status, "failed");
   assert.ok(result.error instanceof DeliveryValidationError);
-  assert.equal(events.some(([name]) => name === "createCampaign" || name === "startCampaign"), false);
+  assert.equal(events.some(([name]) => name === "dispatchCampaign"), false);
   assert.deepEqual(
     events.map(([name]) => name),
     ["claimNext", "getCampaign", "fail"],
@@ -98,39 +98,41 @@ test("an outbox hash mismatch is rejected before the delivery client", async () 
 
   assert.equal(result.status, "failed");
   assert.ok(result.error instanceof DeliveryValidationError);
-  assert.equal(setup.events.some(([name]) => name === "createCampaign"), false);
+  assert.equal(setup.events.some(([name]) => name === "dispatchCampaign"), false);
 });
 
-test("an approved campaign is only marked dispatched after listmonk accepts it", async () => {
+test("an approved campaign is only marked dispatched after n8n accepts it", async () => {
   const { events, worker } = harness();
 
   const result = await worker.processNext();
 
-  assert.deepEqual(result, { status: "dispatched", campaignId: "campaign-1", remoteId: 91 });
+  assert.deepEqual(result, { status: "dispatched", campaignId: "campaign-1", remoteId: "exec-91" });
   assert.deepEqual(
     events.map(([name]) => name),
     [
       "claimNext",
       "getCampaign",
-      "createCampaign",
+      "getCampaignRecipients",
+      "dispatchCampaign",
       "setRemoteCampaign",
-      "startCampaign",
       "markDispatched",
     ],
   );
-  assert.deepEqual(events[2][1], {
+  assert.deepEqual(events[3][1], {
     name: "Avila Ops - Daily",
     subject: "Daily news",
-    lists: [3],
-    body: "<h1>Daily news</h1>",
-    type: "regular",
-    content_type: "html",
-    messenger: "email",
-    tags: ["avilaops", "avila:campaign-1"],
+    campaignId: "campaign-1",
+    outboxId: "outbox-1",
+    contentHash: "sha256:approved",
+    audienceListIds: [3],
+    htmlContent: "<h1>Daily news</h1>",
+    previewText: "",
+    recipientEmails: ["reader@example.com"],
   });
+  assert.deepEqual(events[3][2], { idempotencyKey: "outbox-1" });
 });
 
-test("a retry reuses a persisted remote campaign instead of creating a duplicate", async () => {
+test("a retry reuses a persisted n8n execution instead of dispatching a duplicate", async () => {
   const { events, worker } = harness({
     campaign: approvedCampaign({ remoteCampaignId: 91 }),
   });
@@ -138,11 +140,36 @@ test("a retry reuses a persisted remote campaign instead of creating a duplicate
   const result = await worker.processNext();
 
   assert.deepEqual(result, { status: "dispatched", campaignId: "campaign-1", remoteId: 91 });
-  assert.equal(events.some(([name]) => name === "createCampaign"), false);
+  assert.equal(events.some(([name]) => name === "dispatchCampaign"), false);
   assert.deepEqual(
     events.map(([name]) => name),
-    ["claimNext", "getCampaign", "startCampaign", "markDispatched"],
+    ["claimNext", "getCampaign", "getCampaignRecipients", "markDispatched"],
   );
+});
+
+test("delivery fails before n8n when the approved recipient snapshot is empty", async () => {
+  const setup = harness();
+  setup.worker = createDeliveryWorker({
+    repository: {
+      async getCampaign() { return approvedCampaign(); },
+      async getCampaignRecipients() { return []; },
+      async setRemoteCampaign() { throw new Error("must not persist"); },
+    },
+    outbox: {
+      async claimNext() { return setup.item; },
+      async markDispatched() { throw new Error("must not dispatch"); },
+      async fail(id, error) { setup.events.push(["fail", id, error]); },
+    },
+    deliveryClient: {
+      async dispatchCampaign() { throw new Error("must not call n8n"); },
+    },
+    env: { DELIVERY_ENABLED: "true" },
+  });
+
+  const result = await setup.worker.processNext();
+  assert.equal(result.status, "failed");
+  assert.ok(result.error instanceof DeliveryValidationError);
+  assert.match(result.error.message, /no frozen recipients/);
 });
 
 test("the outbox reclaims a dispatch lock after the configured timeout", async () => {

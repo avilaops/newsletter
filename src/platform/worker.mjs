@@ -12,13 +12,13 @@ function requireMethod(target, method, dependencyName) {
 }
 
 function validateDependencies(repository, outbox, deliveryClient) {
-  for (const method of ["getCampaign", "setRemoteCampaign"]) {
+  for (const method of ["getCampaign", "getCampaignRecipients", "setRemoteCampaign"]) {
     requireMethod(repository, method, "repository");
   }
   for (const method of ["claimNext", "markDispatched", "fail"]) {
     requireMethod(outbox, method, "outbox");
   }
-  for (const method of ["createCampaign", "startCampaign"]) {
+  for (const method of ["dispatchCampaign"]) {
     requireMethod(deliveryClient, method, "deliveryClient");
   }
 }
@@ -61,33 +61,20 @@ function validateApprovedCampaign(item, campaign) {
   }
 }
 
-function toListmonkPayload(item, campaign) {
-  const optional =
-    item.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
-      ? item.payload
-      : {};
-
-  // Approved repository fields always win over outbox metadata. This prevents a
-  // stale or tampered outbox payload from changing content or recipients.
+function toN8nPayload(item, campaign, recipientEmails) {
+  // Build exclusively from the approved campaign. Outbox metadata is never
+  // allowed to override content, recipients, or sender-facing fields.
   return {
-    ...optional,
     name: campaign.name,
     subject: campaign.subject,
-    lists: [...campaign.audienceListIds],
-    body: campaign.htmlContent,
-    type: "regular",
-    content_type: "html",
-    messenger: "email",
-    tags: [...new Set([...(Array.isArray(optional.tags) ? optional.tags : []), `avila:${campaign.id}`])],
+    campaignId: campaign.id,
+    outboxId: item.id,
+    contentHash: campaign.approvedHash,
+    audienceListIds: [...campaign.audienceListIds],
+    htmlContent: campaign.htmlContent,
+    previewText: campaign.previewText ?? "",
+    recipientEmails: [...recipientEmails],
   };
-}
-
-function remoteCampaignId(created) {
-  const id = created?.id ?? created?.data?.id;
-  if ((typeof id !== "number" && typeof id !== "string") || String(id).trim() === "") {
-    throw new Error("listmonk did not return a campaign id");
-  }
-  return id;
 }
 
 /**
@@ -114,14 +101,17 @@ export function createDeliveryWorker({
       try {
         const campaign = await repository.getCampaign(item.campaignId);
         validateApprovedCampaign(item, campaign);
+        const recipientEmails = await repository.getCampaignRecipients(campaign.id, campaign.approvedHash);
+        if (!recipientEmails.length) throw new DeliveryValidationError(`campaign ${campaign.id} has no frozen recipients`);
 
         let remoteId = campaign.remoteCampaignId;
         if (!remoteId) {
-          const created = await deliveryClient.createCampaign(toListmonkPayload(item, campaign));
-          remoteId = remoteCampaignId(created);
+          const dispatched = await deliveryClient.dispatchCampaign(toN8nPayload(item, campaign, recipientEmails), {
+            idempotencyKey: item.id,
+          });
+          remoteId = dispatched.executionId;
           await repository.setRemoteCampaign(campaign.id, remoteId);
         }
-        await deliveryClient.startCampaign(remoteId);
         await outbox.markDispatched(item.id, { remoteId });
 
         return { status: "dispatched", campaignId: campaign.id, remoteId };

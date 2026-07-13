@@ -16,10 +16,64 @@ services:
         generateValue: true
       - key: DELIVERY_ENABLED
         value: "false"
+      - fromGroup: avila-automation-secrets
       - key: HOST
         value: 0.0.0.0
       - key: NODE_ENV
         value: production
+
+  - type: web
+    name: avila-n8n
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: agent/mailersend-email-templates
+    dockerfilePath: ./Dockerfile.n8n
+    healthCheckPath: /healthz
+    envVars:
+      - key: DB_TYPE
+        value: postgresdb
+      - key: DB_POSTGRESDB_HOST
+        fromDatabase:
+          name: avila-n8n-db
+          property: host
+      - key: DB_POSTGRESDB_PORT
+        fromDatabase:
+          name: avila-n8n-db
+          property: port
+      - key: DB_POSTGRESDB_DATABASE
+        fromDatabase:
+          name: avila-n8n-db
+          property: database
+      - key: DB_POSTGRESDB_USER
+        fromDatabase:
+          name: avila-n8n-db
+          property: user
+      - key: DB_POSTGRESDB_PASSWORD
+        fromDatabase:
+          name: avila-n8n-db
+          property: password
+      - key: DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED
+        value: "false"
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true
+      - fromGroup: avila-automation-secrets
+      - key: N8N_HOST
+        value: avila-n8n.onrender.com
+      - key: N8N_PROTOCOL
+        value: https
+      - key: WEBHOOK_URL
+        value: https://avila-n8n.onrender.com/
+      - key: N8N_EDITOR_BASE_URL
+        value: https://avila-n8n.onrender.com/
+      - key: PLATFORM_API_URL
+        value: https://avila-newsletters.onrender.com
+      - key: SMTP_FROM_EMAIL
+        value: nicolas@avilaops.com
+      - key: GENERIC_TIMEZONE
+        value: America/Sao_Paulo
+      - key: TZ
+        value: America/Sao_Paulo
 
 databases:
   - name: avila-newsletters-db
@@ -28,3 +82,17 @@ databases:
     databaseName: avila_newsletters
     user: newsletters
     ipAllowList: []
+  - name: avila-n8n-db
+    plan: free
+    region: virginia
+    databaseName: n8n
+    user: n8n
+    ipAllowList: []
+
+envVarGroups:
+  - name: avila-automation-secrets
+    envVars:
+      - key: N8N_INGEST_TOKEN
+        generateValue: true
+      - key: N8N_WEBHOOK_SECRET
+        generateValue: true
