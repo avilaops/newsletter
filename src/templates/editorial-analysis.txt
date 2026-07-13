@@ -1,0 +1,36 @@
+ÁVILA OPS
+{{eyebrow}}
+
+{{title}}
+{{intro}}
+
+EM UMA FRASE
+{{key_takeaway}}
+
+QUAIS DADOS ENTRAM NESSA OPERAÇÃO
+{% for group in data_groups %}
+{{group.name}}: {{group.items}}
+{% endfor %}
+
+COMO A AUTOMAÇÃO FUNCIONA
+{{workflow}}
+
+EXEMPLO DE REGISTRO
+{{record_example}}
+
+O QUE ARMAZENAR DE CONTEÚDO EXTERNO
+{{copyright_guidance}}
+
+ARQUITETURA SUGERIDA
+{% for layer in architecture %}
+{{layer.name}}: {{layer.purpose}}
+{% endfor %}
+
+RECOMENDAÇÃO PARA A ÁVILA OPS
+{{recommendation}}
+
+{{cta_label}}: {{cta_url}}
+
+{{company_address}}
+Preferências: {{preferences_url}}
+Cancelar inscrição: {{unsubscribe}}

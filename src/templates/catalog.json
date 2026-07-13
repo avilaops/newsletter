@@ -1,0 +1,29 @@
+[
+  {
+    "slug": "editorial-analysis",
+    "name": "Avila Ops - Analise editorial",
+    "subject": "{{title}} | Avila Ops",
+    "html": "editorial-analysis.html",
+    "text": "editorial-analysis.txt",
+    "sample": "editorial-analysis.json",
+    "tags": ["newsletter", "editorial", "analysis"]
+  },
+  {
+    "slug": "daily-digest",
+    "name": "Avila Ops - Resumo diario",
+    "subject": "{{edition_label}}: {{headline}}",
+    "html": "daily-digest.html",
+    "text": "daily-digest.txt",
+    "sample": "daily-digest.json",
+    "tags": ["newsletter", "daily", "digest"]
+  },
+  {
+    "slug": "breaking-alert",
+    "name": "Avila Ops - Alerta prioritario",
+    "subject": "Alerta: {{title}}",
+    "html": "breaking-alert.html",
+    "text": "breaking-alert.txt",
+    "sample": "breaking-alert.json",
+    "tags": ["newsletter", "alert", "priority"]
+  }
+]

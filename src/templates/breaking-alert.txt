@@ -1,0 +1,14 @@
+ÁVILA OPS — ALERTA {{category}}
+
+{{title}}
+{{summary}}
+
+POR QUE IMPORTA
+{{why_it_matters}}
+
+Fonte: {{source}} · {{published_at}}
+Abrir notícia: {{url}}
+
+{{company_address}}
+Preferências: {{preferences_url}}
+Cancelar inscrição: {{unsubscribe}}

@@ -1,0 +1,15 @@
+{
+  "name": "avilaops-newsletters",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/render-previews.mjs",
+    "validate": "node scripts/validate-templates.mjs",
+    "templates:plan": "node scripts/sync-mailersend-templates.mjs",
+    "templates:sync": "node scripts/sync-mailersend-templates.mjs --apply"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
