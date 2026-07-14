@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 const schema = z.object({
-  PORT: z.coerce.number().int().positive().default(3000),
-  HOST: z.string().default("127.0.0.1"),
   DATABASE_URL: z.string().min(1),
-  ADMIN_API_TOKEN: z.string().optional(),
   DELIVERY_ENABLED: z.enum(["true", "false"]).default("false"),
   N8N_DELIVERY_WEBHOOK_URL: z.string().default(""),
   N8N_WEBHOOK_SECRET: z.string().default(""),
@@ -18,5 +15,9 @@ export function loadConfig(environment = process.env) {
 }
 
 export function loadServerConfig(environment = process.env) {
-  return schema.extend({ ADMIN_API_TOKEN: z.string().min(20) }).parse(environment);
+  return schema.extend({
+    PORT: z.coerce.number().int().positive(),
+    HOST: z.string().min(1),
+    ADMIN_API_TOKEN: z.string().min(20),
+  }).parse(environment);
 }

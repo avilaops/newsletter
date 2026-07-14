@@ -4,14 +4,16 @@ services:
   platform-db:
     image: postgres:17-alpine
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
-      POSTGRES_DB: avila_newsletters
-      POSTGRES_USER: newsletters
-      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:-local-newsletters-password}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB must be configured in .env.production}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER must be configured in .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be configured in .env.production}
     ports:
-      - "127.0.0.1:5433:5432"
+      - "${POSTGRES_BIND_ADDRESS:?POSTGRES_BIND_ADDRESS must be configured in .env.production}:${POSTGRES_PORT:?POSTGRES_PORT must be configured in .env.production}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U newsletters -d avila_newsletters"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,15 +23,17 @@ services:
   app:
     build: .
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
-      PORT: 3000
-      HOST: 0.0.0.0
-      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
-      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-change-this-before-shared-use}
-      DELIVERY_ENABLED: "false"
-      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
+      PORT: ${PORT:?PORT must be configured in .env.production}
+      HOST: ${HOST:?HOST must be configured in .env.production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured in .env.production}
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:?ADMIN_API_TOKEN must be configured in .env.production}
+      DELIVERY_ENABLED: ${DELIVERY_ENABLED:?DELIVERY_ENABLED must be configured in .env.production}
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:?N8N_INGEST_TOKEN must be configured in .env.production}
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${APP_BIND_ADDRESS:?APP_BIND_ADDRESS must be configured in .env.production}:${APP_PORT:?APP_PORT must be configured in .env.production}:${PORT:?PORT must be configured in .env.production}"
     depends_on:
       platform-db:
         condition: service_healthy
@@ -38,13 +42,15 @@ services:
     build: .
     restart: unless-stopped
     command: ["sh", "-c", "node src/platform/migrate.mjs && node src/platform/run-worker.mjs"]
+    env_file:
+      - .env.production
     environment:
-      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
-      DELIVERY_ENABLED: ${DELIVERY_ENABLED:-false}
-      N8N_DELIVERY_WEBHOOK_URL: http://n8n:5678/webhook/avila-newsletters-delivery
-      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
-      WORKER_POLL_MS: ${WORKER_POLL_MS:-5000}
-      WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:-300000}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be configured in .env.production}
+      DELIVERY_ENABLED: ${DELIVERY_ENABLED:?DELIVERY_ENABLED must be configured in .env.production}
+      N8N_DELIVERY_WEBHOOK_URL: ${N8N_DELIVERY_WEBHOOK_URL:?N8N_DELIVERY_WEBHOOK_URL must be configured in .env.production}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:?N8N_WEBHOOK_SECRET must be configured in .env.production}
+      WORKER_POLL_MS: ${WORKER_POLL_MS:?WORKER_POLL_MS must be configured in .env.production}
+      WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:?WORKER_LOCK_TIMEOUT_MS must be configured in .env.production}
     depends_on:
       platform-db:
         condition: service_healthy
@@ -54,12 +60,14 @@ services:
   n8n-db:
     image: postgres:17-alpine
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
-      POSTGRES_DB: n8n
-      POSTGRES_USER: n8n
-      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
+      POSTGRES_DB: ${N8N_POSTGRES_DB:?N8N_POSTGRES_DB must be configured in .env.production}
+      POSTGRES_USER: ${N8N_POSTGRES_USER:?N8N_POSTGRES_USER must be configured in .env.production}
+      POSTGRES_PASSWORD: ${N8N_POSTGRES_PASSWORD:?N8N_POSTGRES_PASSWORD must be configured in .env.production}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -71,23 +79,25 @@ services:
       context: .
       dockerfile: Dockerfile.n8n
     restart: unless-stopped
+    env_file:
+      - .env.production
     environment:
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: n8n-db
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: n8n
-      DB_POSTGRESDB_USER: n8n
-      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-this-local-encryption-key}
-      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
-      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
-      PLATFORM_API_URL: http://app:3000
-      SMTP_FROM_EMAIL: nicolas@avilaops.com
-      GENERIC_TIMEZONE: America/Sao_Paulo
-      TZ: America/Sao_Paulo
-      N8N_SECURE_COOKIE: "false"
+      DB_TYPE: ${DB_TYPE:?DB_TYPE must be configured in .env.production}
+      DB_POSTGRESDB_HOST: ${DB_POSTGRESDB_HOST:?DB_POSTGRESDB_HOST must be configured in .env.production}
+      DB_POSTGRESDB_PORT: ${DB_POSTGRESDB_PORT:?DB_POSTGRESDB_PORT must be configured in .env.production}
+      DB_POSTGRESDB_DATABASE: ${DB_POSTGRESDB_DATABASE:?DB_POSTGRESDB_DATABASE must be configured in .env.production}
+      DB_POSTGRESDB_USER: ${DB_POSTGRESDB_USER:?DB_POSTGRESDB_USER must be configured in .env.production}
+      DB_POSTGRESDB_PASSWORD: ${DB_POSTGRESDB_PASSWORD:?DB_POSTGRESDB_PASSWORD must be configured in .env.production}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?N8N_ENCRYPTION_KEY must be configured in .env.production}
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:?N8N_INGEST_TOKEN must be configured in .env.production}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:?N8N_WEBHOOK_SECRET must be configured in .env.production}
+      PLATFORM_API_URL: ${PLATFORM_API_URL:?PLATFORM_API_URL must be configured in .env.production}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:?SMTP_FROM_EMAIL must be configured in .env.production}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:?GENERIC_TIMEZONE must be configured in .env.production}
+      TZ: ${TZ:?TZ must be configured in .env.production}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:?N8N_SECURE_COOKIE must be configured in .env.production}
     ports:
-      - "127.0.0.1:5678:5678"
+      - "${N8N_BIND_ADDRESS:?N8N_BIND_ADDRESS must be configured in .env.production}:${N8N_PORT:?N8N_PORT must be configured in .env.production}:5678"
     depends_on:
       n8n-db:
         condition: service_healthy

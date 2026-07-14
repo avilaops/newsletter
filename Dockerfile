@@ -8,8 +8,6 @@ RUN pnpm install --frozen-lockfile
 FROM node:24.14.0-alpine AS runtime
 
 WORKDIR /app
-ENV NODE_ENV=production
-ENV HOST=0.0.0.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 

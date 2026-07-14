@@ -2,7 +2,7 @@ services:
   - type: web
     name: avila-newsletters
     runtime: docker
-    plan: free
+    plan: starter
     region: virginia
     branch: agent/mailersend-email-templates
     healthCheckPath: /api/health
@@ -16,16 +16,37 @@ services:
         generateValue: true
       - key: DELIVERY_ENABLED
         value: "false"
+      - key: N8N_DELIVERY_WEBHOOK_URL
+        value: https://avila-n8n.onrender.com/webhook/avila-newsletters-delivery
       - fromGroup: avila-automation-secrets
       - key: HOST
         value: 0.0.0.0
       - key: NODE_ENV
         value: production
 
+  - type: worker
+    name: avila-newsletters-worker
+    runtime: docker
+    plan: starter
+    region: virginia
+    branch: agent/mailersend-email-templates
+    dockerCommand: sh -c "node src/platform/migrate.mjs && node src/platform/run-worker.mjs"
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: avila-newsletters-db
+          property: connectionString
+      - key: DELIVERY_ENABLED
+        value: "false"
+      - key: N8N_DELIVERY_WEBHOOK_URL
+        value: https://avila-n8n.onrender.com/webhook/avila-newsletters-delivery
+      - fromGroup: avila-automation-secrets
+
   - type: web
     name: avila-n8n
     runtime: docker
-    plan: free
+    plan: starter
     region: virginia
     branch: agent/mailersend-email-templates
     dockerfilePath: ./Dockerfile.n8n
@@ -77,13 +98,13 @@ services:
 
 databases:
   - name: avila-newsletters-db
-    plan: free
+    plan: basic-256mb
     region: virginia
     databaseName: avila_newsletters
     user: newsletters
     ipAllowList: []
   - name: avila-n8n-db
-    plan: free
+    plan: basic-256mb
     region: virginia
     databaseName: n8n
     user: n8n
