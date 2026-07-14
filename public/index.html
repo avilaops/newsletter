@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="Painel editorial da Ávila Ops para revisão e aprovação de newsletters."
+    />
+    <title>Campanhas | Ávila Ops</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" type="module"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <a class="brand" href="/" aria-label="Ávila Ops — início">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span>
+            <strong>Ávila Ops</strong>
+            <small>Newsletters</small>
+          </span>
+        </a>
+
+        <nav class="main-nav" aria-label="Seções">
+          <a class="nav-item is-active" href="#campanhas" aria-current="page">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75Zm2 .25v1.25l6 4.23 6-4.23V6H6Zm12 3.7-5.42 3.82a1 1 0 0 1-1.16 0L6 9.7V18h12V9.7Z" />
+            </svg>
+            Campanhas
+          </a>
+          <a class="nav-item" href="#fontes">Fontes</a>
+          <a class="nav-item" href="#conteudos">Conteúdos</a>
+          <a class="nav-item" href="#audiencias">Audiências</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <span class="sidebar-footer__label">Fluxo protegido</span>
+          <p>A entrega depende de aprovação e de uma trava operacional independente.</p>
+        </div>
+      </aside>
+
+      <main id="conteudo" class="main-content" tabindex="-1">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Operação editorial</p>
+            <h1>Campanhas</h1>
+          </div>
+          <div class="topbar-actions">
+            <div id="health-status" class="health-pill is-loading" role="status" aria-live="polite">
+              <span class="health-dot" aria-hidden="true"></span>
+              <span>Verificando entrega…</span>
+            </div>
+            <button id="open-create" class="button button--primary" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5a1 1 0 1 1 2 0v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5Z" /></svg>
+              Nova campanha
+            </button>
+          </div>
+        </header>
+
+        <section class="session-panel" aria-labelledby="session-title">
+          <div>
+            <p class="eyebrow">Sessão administrativa</p>
+            <h2 id="session-title">Identifique o revisor</h2>
+            <p>As credenciais permanecem somente nesta aba e não são gravadas no servidor.</p>
+          </div>
+          <form id="session-form" class="session-form">
+            <label>
+              <span>Administrador</span>
+              <input id="session-admin" name="adminId" autocomplete="username" required minlength="2" maxlength="120" placeholder="nome ou e-mail" />
+            </label>
+            <label>
+              <span>Token administrativo</span>
+              <input id="session-token" name="token" type="password" autocomplete="current-password" required minlength="20" placeholder="token da plataforma" />
+            </label>
+            <button class="button button--secondary" type="submit">Aplicar sessão</button>
+            <span id="session-status" class="session-status" role="status">Sessão não configurada</span>
+          </form>
+        </section>
+
+        <section id="delivery-banner" class="safety-banner is-loading" aria-labelledby="delivery-title">
+          <div class="safety-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v2h.5A2.5 2.5 0 0 1 19 10.5v9a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 19.5v-9A2.5 2.5 0 0 1 7.5 8H8V6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v2h4V6a2 2 0 0 0-2-2Zm0 8a1.5 1.5 0 0 0-1 2.62V17a1 1 0 1 0 2 0v-2.38A1.5 1.5 0 0 0 12 12Z" /></svg>
+          </div>
+          <div>
+            <h2 id="delivery-title">Verificando trava de envio</h2>
+            <p id="delivery-copy">Aguarde enquanto confirmamos o estado operacional do serviço.</p>
+          </div>
+          <button id="retry-health" class="button button--quiet is-hidden" type="button">Tentar novamente</button>
+        </section>
+
+        <section class="metrics" aria-label="Resumo das campanhas">
+          <article class="metric-card">
+            <span class="metric-label">Total</span>
+            <strong id="metric-total">—</strong>
+            <span class="metric-caption">campanhas</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Em revisão</span>
+            <strong id="metric-review">—</strong>
+            <span class="metric-caption">aguardando decisão</span>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Aprovadas</span>
+            <strong id="metric-approved">—</strong>
+            <span class="metric-caption">prontas para fila</span>
+          </article>
+          <article class="metric-card metric-card--accent">
+            <span class="metric-label">Na fila</span>
+            <strong id="metric-queued">—</strong>
+            <span class="metric-caption">aguardando entrega</span>
+          </article>
+        </section>
+
+        <section class="workspace-grid" aria-label="Configuração no-code">
+          <article id="fontes" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">1</span><h2>Fontes</h2><p>Onde o n8n deve buscar notícias.</p></div>
+              <button id="open-source" class="button button--secondary" type="button">Adicionar fonte</button>
+            </div>
+            <div id="source-list" class="compact-list"><p class="muted-copy">Configure a sessão para carregar as fontes.</p></div>
+          </article>
+
+          <article id="conteudos" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">2</span><h2>Conteúdos coletados</h2><p>Notícias disponíveis para compor a próxima edição.</p></div>
+              <span id="article-count" class="count-pill">0 itens</span>
+            </div>
+            <div id="article-list" class="compact-list"><p class="muted-copy">Aguardando a primeira coleta do n8n.</p></div>
+          </article>
+
+          <article id="audiencias" class="workspace-card">
+            <div class="workspace-card__header">
+              <div><span class="step-number">3</span><h2>Audiências</h2><p>Grupos que podem receber campanhas aprovadas.</p></div>
+              <button id="open-audience" class="button button--secondary" type="button">Nova audiência</button>
+            </div>
+            <div id="audience-list" class="compact-list"><p class="muted-copy">Nenhuma audiência configurada.</p></div>
+          </article>
+        </section>
+
+        <section id="campanhas" class="campaign-panel" aria-labelledby="campaigns-title">
+          <div class="panel-header">
+            <div>
+              <h2 id="campaigns-title">Fluxo editorial</h2>
+              <p>Revise o conteúdo e avance cada campanha com segurança.</p>
+            </div>
+            <div class="filter-wrap">
+              <label for="status-filter">Filtrar por status</label>
+              <select id="status-filter">
+                <option value="all">Todos os status</option>
+                <option value="draft">Rascunho</option>
+                <option value="review">Em revisão</option>
+                <option value="approved">Aprovada</option>
+                <option value="rejected">Rejeitada</option>
+                <option value="queued">Na fila</option>
+                <option value="sent">Enviada</option>
+                <option value="failed">Falha ou cancelada</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="campaign-loading" class="state-message" role="status">
+            <span class="spinner" aria-hidden="true"></span>
+            Carregando campanhas…
+          </div>
+
+          <div id="campaign-error" class="state-message state-message--error is-hidden" role="alert">
+            <strong>Não foi possível carregar as campanhas.</strong>
+            <span id="campaign-error-copy">Confira a conexão com a API.</span>
+            <button id="retry-campaigns" class="button button--secondary" type="button">Tentar novamente</button>
+          </div>
+
+          <div id="campaign-empty" class="empty-state is-hidden">
+            <div class="empty-state__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75A1.75 1.75 0 0 1 5.75 4ZM6 7.25l6 4.23 6-4.23V6H6v1.25Zm12 2.45-5.42 3.82a1 1 0 0 1-1.16 0L6 9.7V18h12V9.7Z" /></svg>
+            </div>
+            <h3>Nenhuma campanha por aqui</h3>
+            <p id="empty-copy">Crie um rascunho para iniciar o fluxo editorial.</p>
+            <button id="empty-create" class="button button--primary" type="button">Criar campanha</button>
+          </div>
+
+          <div id="campaign-list" class="campaign-list is-hidden" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="create-dialog" class="dialog dialog--wide" aria-labelledby="create-title">
+      <form id="create-form" method="dialog" novalidate>
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">Novo rascunho</p>
+            <h2 id="create-title">Criar campanha</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-dialog aria-label="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.3 5.3a1 1 0 0 1 1.4 0l5.3 5.29 5.3-5.3a1 1 0 1 1 1.4 1.42L13.42 12l5.3 5.3a1 1 0 0 1-1.42 1.4L12 13.42l-5.3 5.3a1 1 0 0 1-1.4-1.42l5.29-5.3-5.3-5.3a1 1 0 0 1 0-1.4Z" /></svg>
+          </button>
+        </div>
+
+        <div class="dialog-body">
+          <div class="form-grid">
+            <div class="field">
+              <label for="campaign-name">Nome interno <span aria-hidden="true">*</span></label>
+              <input id="campaign-name" name="name" type="text" required maxlength="120" autocomplete="off" placeholder="Ex.: Resumo diário — 13 de julho" />
+              <small>Visível apenas para a equipe.</small>
+            </div>
+            <div class="field">
+              <label for="campaign-subject">Assunto do e-mail <span aria-hidden="true">*</span></label>
+              <input id="campaign-subject" name="subject" type="text" required maxlength="180" autocomplete="off" placeholder="O que movimentou as operações hoje" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="campaign-preview">Texto de prévia</label>
+            <input id="campaign-preview" name="previewText" type="text" maxlength="240" autocomplete="off" placeholder="Uma linha curta exibida depois do assunto na caixa de entrada" />
+          </div>
+
+          <div class="field">
+            <label for="campaign-audiences">Listas de audiência <span aria-hidden="true">*</span></label>
+            <div id="campaign-audiences" class="choice-grid" role="group" aria-describedby="audiences-help"></div>
+            <small id="audiences-help">Selecione ao menos uma audiência.</small>
+          </div>
+
+          <div class="field">
+            <label>Notícias desta edição <span aria-hidden="true">*</span></label>
+            <div id="campaign-articles" class="article-picker" role="group"></div>
+            <small>Selecione as notícias; a plataforma monta o e-mail automaticamente.</small>
+          </div>
+
+          <div class="field">
+            <label for="campaign-intro">Abertura editorial</label>
+            <textarea id="campaign-intro" name="intro" rows="4" maxlength="1200" placeholder="Contextualize brevemente os destaques da edição."></textarea>
+          </div>
+
+          <div id="create-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+
+        <div class="dialog-footer">
+          <button class="button button--secondary" type="button" data-close-dialog>Cancelar</button>
+          <button id="create-submit" class="button button--primary" type="submit">Salvar rascunho</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="source-dialog" class="dialog" aria-labelledby="source-title">
+      <form id="source-form" method="dialog">
+        <div class="dialog-header"><div><p class="eyebrow">Coleta automática</p><h2 id="source-title">Adicionar fonte</h2></div><button class="icon-button" type="button" data-close-source aria-label="Fechar">×</button></div>
+        <div class="dialog-body">
+          <div class="field"><label>Nome</label><input name="name" required minlength="2" placeholder="Ex.: Mercado Livre Notícias" /></div>
+          <div class="form-grid"><div class="field"><label>Tipo</label><select name="type"><option value="rss">Feed RSS</option><option value="website">Site</option><option value="api">API</option></select></div><div class="field"><label>Categoria</label><input name="category" required value="geral" /></div></div>
+          <div class="field"><label>Endereço</label><input name="url" type="url" required placeholder="https://exemplo.com/feed.xml" /></div>
+          <p class="form-note">As fontes ativas são verificadas automaticamente a cada 30 minutos.</p>
+          <div id="source-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+        <div class="dialog-footer"><button class="button button--secondary" type="button" data-close-source>Cancelar</button><button class="button button--primary" type="submit">Salvar fonte</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="audience-dialog" class="dialog" aria-labelledby="audience-title">
+      <form id="audience-form" method="dialog">
+        <div class="dialog-header"><div><p class="eyebrow">Destinatários</p><h2 id="audience-title">Nova audiência</h2></div><button class="icon-button" type="button" data-close-audience aria-label="Fechar">×</button></div>
+        <div class="dialog-body">
+          <div class="field"><label>Nome</label><input name="name" required minlength="2" placeholder="Ex.: Clientes e parceiros" /></div>
+          <div class="field"><label>Descrição</label><textarea name="description" rows="3" maxlength="500"></textarea></div>
+          <div class="field"><label>E-mails</label><textarea name="emails" rows="6" required placeholder="um@exemplo.com&#10;outro@exemplo.com"></textarea><small>Um endereço por linha. Duplicados serão removidos.</small></div>
+          <div class="field"><label>Referência externa</label><input name="externalKey" placeholder="Opcional" /></div>
+          <div id="audience-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+        <div class="dialog-footer"><button class="button button--secondary" type="button" data-close-audience>Cancelar</button><button class="button button--primary" type="submit">Salvar audiência</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="action-dialog" class="dialog" aria-labelledby="action-title">
+      <form id="action-form" method="dialog" novalidate>
+        <div class="dialog-header">
+          <div>
+            <p id="action-eyebrow" class="eyebrow">Decisão editorial</p>
+            <h2 id="action-title">Confirmar ação</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-action aria-label="Fechar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.3 5.3a1 1 0 0 1 1.4 0l5.3 5.29 5.3-5.3a1 1 0 1 1 1.4 1.42L13.42 12l5.3 5.3a1 1 0 0 1-1.42 1.4L12 13.42l-5.3 5.3a1 1 0 0 1-1.4-1.42l5.29-5.3-5.3-5.3a1 1 0 0 1 0-1.4Z" /></svg>
+          </button>
+        </div>
+        <div class="dialog-body">
+          <p id="action-description" class="dialog-description"></p>
+          <div id="reason-field" class="field is-hidden">
+            <label for="action-reason">Motivo da rejeição <span aria-hidden="true">*</span></label>
+            <textarea id="action-reason" name="reason" rows="4" maxlength="600" placeholder="Explique o que precisa ser corrigido"></textarea>
+          </div>
+          <div id="action-error" class="inline-error is-hidden" role="alert"></div>
+        </div>
+        <div class="dialog-footer">
+          <button class="button button--secondary" type="button" data-close-action>Cancelar</button>
+          <button id="action-submit" class="button button--primary" type="submit">Confirmar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="preview-dialog" class="dialog dialog--preview" aria-labelledby="preview-title">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Prévia segura</p><h2 id="preview-title">Revisar campanha</h2><p id="preview-subject" class="dialog-description"></p></div>
+        <button class="icon-button" type="button" data-close-preview aria-label="Fechar">×</button>
+      </div>
+      <div class="preview-shell">
+        <iframe id="preview-frame" title="Conteúdo renderizado da campanha" sandbox></iframe>
+      </div>
+      <div class="dialog-footer"><button class="button button--primary" type="button" data-close-preview>Concluir revisão visual</button></div>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

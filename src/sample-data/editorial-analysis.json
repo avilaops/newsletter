@@ -1,0 +1,52 @@
+{
+  "preheader": "Como um aplicativo de notícias organiza conteúdo, hábitos e comunidade.",
+  "eyebrow": "Arquitetura de produto",
+  "title": "Como uma operação de notícias armazena e processa dados",
+  "intro": "Aplicativos com histórico de leitura, hábitos, streaks, livros, comunidade, notificações e curadoria por IA dependem de armazenamento persistente e de uma camada de processamento antes da publicação.",
+  "key_takeaway": "A coleta não deve publicar diretamente no aplicativo: primeiro ela normaliza, classifica, salva e envia o conteúdo para revisão editorial.",
+  "data_groups": [
+    {
+      "name": "Usuários",
+      "items": "Conta, preferências, assuntos favoritos, dispositivos e tokens de notificação."
+    },
+    {
+      "name": "Notícias",
+      "items": "Título, resumo, URL original, fonte, imagem, publicação, categoria, relevância, imparcialidade e revisão."
+    },
+    {
+      "name": "Comportamento",
+      "items": "Visualizações, tempo de leitura, curtidas, salvamentos, compartilhamentos e assuntos acessados."
+    },
+    {
+      "name": "Hábitos e comunidade",
+      "items": "Sequências de leitura, hábitos, livros, amizades, seguidores e atividades."
+    }
+  ],
+  "workflow": "RSS, APIs e sites\n  ↓\nColeta e normalização\n  ↓\nIA identifica assunto e duplicidades\n  ↓\nBanco armazena notícia e metadados\n  ↓\nIA gera resumo e pontuação\n  ↓\nRevisão editorial\n  ↓\nAPI entrega o feed\n  ↓\nLeitura e preferências são registradas",
+  "record_example": "{\n  \"title\": \"Mercado Livre anuncia nova ferramenta\",\n  \"source\": \"Mercado Livre\",\n  \"sourceUrl\": \"https://exemplo.com/noticia\",\n  \"publishedAt\": \"2026-07-12T14:30:00-03:00\",\n  \"category\": \"marketplaces\",\n  \"importanceScore\": 87,\n  \"biasScore\": 12,\n  \"status\": \"reviewed\"\n}",
+  "copyright_guidance": "Para fontes externas, prefira metadados, pequenos trechos, resumo próprio, URL original, autoria e imagem licenciada ou referenciada. Conteúdo integral exige avaliação das licenças, termos da fonte e orientação jurídica.",
+  "architecture": [
+    {
+      "name": "PostgreSQL + pgvector",
+      "purpose": "Fonte transacional de usuários, notícias, revisão e histórico; vetores para similaridade quando houver benefício mensurável."
+    },
+    {
+      "name": "Redis",
+      "purpose": "Filas, cache do feed, deduplicação temporária e conteúdo em alta."
+    },
+    {
+      "name": "Armazenamento de objetos",
+      "purpose": "Imagens licenciadas, áudios, capas e demais arquivos."
+    },
+    {
+      "name": "n8n + painel editorial",
+      "purpose": "Orquestração da coleta e aprovação humana antes da publicação."
+    }
+  ],
+  "recommendation": "Centralize o estado no PostgreSQL, use n8n como orquestrador e mantenha a aprovação editorial como condição obrigatória de publicação.",
+  "cta_label": "Ver painel editorial",
+  "cta_url": "https://example.com/editorial",
+  "company_address": "Ávila Ops · Brasil",
+  "preferences_url": "https://example.com/preferencias",
+  "unsubscribe": "https://example.com/cancelar"
+}

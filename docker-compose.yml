@@ -1,0 +1,97 @@
+name: avila-newsletters
+
+services:
+  platform-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: avila_newsletters
+      POSTGRES_USER: newsletters
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:-local-newsletters-password}
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newsletters -d avila_newsletters"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - platform-data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-change-this-before-shared-use}
+      DELIVERY_ENABLED: "false"
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      platform-db:
+        condition: service_healthy
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["sh", "-c", "node src/platform/migrate.mjs && node src/platform/run-worker.mjs"]
+    environment:
+      DATABASE_URL: postgresql://newsletters:${PLATFORM_DB_PASSWORD:-local-newsletters-password}@platform-db:5432/avila_newsletters
+      DELIVERY_ENABLED: ${DELIVERY_ENABLED:-false}
+      N8N_DELIVERY_WEBHOOK_URL: http://n8n:5678/webhook/avila-newsletters-delivery
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
+      WORKER_POLL_MS: ${WORKER_POLL_MS:-5000}
+      WORKER_LOCK_TIMEOUT_MS: ${WORKER_LOCK_TIMEOUT_MS:-300000}
+    depends_on:
+      platform-db:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+
+  n8n-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U n8n -d n8n"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - n8n-data:/var/lib/postgresql/data
+
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
+    restart: unless-stopped
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-local-n8n-password}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-change-this-local-encryption-key}
+      N8N_INGEST_TOKEN: ${N8N_INGEST_TOKEN:-change-this-ingest-token}
+      N8N_WEBHOOK_SECRET: ${N8N_WEBHOOK_SECRET:-change-this-webhook-secret}
+      PLATFORM_API_URL: http://app:3000
+      SMTP_FROM_EMAIL: nicolas@avilaops.com
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+      N8N_SECURE_COOKIE: "false"
+    ports:
+      - "127.0.0.1:5678:5678"
+    depends_on:
+      n8n-db:
+        condition: service_healthy
+
+volumes:
+  platform-data:
+  n8n-data:

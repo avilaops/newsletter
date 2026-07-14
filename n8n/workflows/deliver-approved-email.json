@@ -1,0 +1,80 @@
+{
+  "id": "avilaDeliverMail1",
+  "name": "Ávila Ops - Entrega aprovada",
+  "nodes": [
+    {
+      "parameters": { "operation": "removeItemsSeenInPreviousExecutions", "dedupeValue": "={{ $json.headers['idempotency-key'] }}", "options": {} },
+      "id": "deduplicate",
+      "name": "Bloquear reenvio duplicado",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [420, -100]
+    },
+    {
+      "parameters": { "fieldToSplitOut": "body.recipientEmails", "options": { "destinationFieldName": "recipientEmail" } },
+      "id": "split-recipients",
+      "name": "Um destinatário por item",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [620, -100]
+    },
+    {
+      "parameters": { "httpMethod": "POST", "path": "avila-newsletters-delivery", "responseMode": "responseNode", "options": {} },
+      "id": "webhook",
+      "name": "Receber campanha aprovada",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": { "options": { "caseSensitive": true }, "conditions": [{ "leftValue": "={{ $json.headers.authorization }}", "rightValue": "={{ 'Bearer ' + $env.N8N_WEBHOOK_SECRET }}", "operator": { "type": "string", "operation": "equals" } }], "combinator": "and" }
+      },
+      "id": "authorize",
+      "name": "Validar segredo",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.SMTP_FROM_EMAIL }}",
+        "toEmail": "={{ $json.recipientEmail }}",
+        "subject": "={{ $json.body.subject }}",
+        "emailFormat": "html",
+        "html": "={{ $json.body.htmlContent }}",
+        "options": {}
+      },
+      "id": "send",
+      "name": "Enviar por SMTP",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [860, -100]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { executionId: $execution.id, accepted: true } }}", "options": { "responseCode": 202 } },
+      "id": "accepted",
+      "name": "Confirmar aceite",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { error: 'unauthorized' } }}", "options": { "responseCode": 401 } },
+      "id": "denied",
+      "name": "Negar acesso",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [500, 120]
+    }
+  ],
+  "connections": {
+    "Receber campanha aprovada": { "main": [[{ "node": "Validar segredo", "type": "main", "index": 0 }]] },
+    "Validar segredo": { "main": [[{ "node": "Bloquear reenvio duplicado", "type": "main", "index": 0 }], [{ "node": "Negar acesso", "type": "main", "index": 0 }]] },
+    "Bloquear reenvio duplicado": { "main": [[{ "node": "Um destinatário por item", "type": "main", "index": 0 }]] },
+    "Um destinatário por item": { "main": [[{ "node": "Enviar por SMTP", "type": "main", "index": 0 }]] },
+    "Enviar por SMTP": { "main": [[{ "node": "Confirmar aceite", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

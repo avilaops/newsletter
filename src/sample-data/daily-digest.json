@@ -1,0 +1,37 @@
+{
+  "preheader": "Três sinais importantes para operação, tecnologia e marketplaces.",
+  "edition_label": "Edição de 12 de julho de 2026",
+  "headline": "O que move a operação hoje",
+  "recipient_name": "Nicolas",
+  "intro": "Selecionamos os pontos que merecem atenção e explicamos o impacto operacional de cada um.",
+  "articles": [
+    {
+      "category": "Marketplaces",
+      "title": "Mercado Livre anuncia nova ferramenta para vendedores",
+      "summary": "A mudança pode reduzir etapas operacionais e alterar a integração de pedidos para lojistas.",
+      "source": "Mercado Livre",
+      "read_time": "3 min",
+      "url": "https://example.com/noticias/mercado-livre"
+    },
+    {
+      "category": "Automação",
+      "title": "Como separar coleta, revisão e publicação",
+      "summary": "Uma fila editorial evita que conteúdo incompleto ou duplicado chegue ao canal final.",
+      "source": "Ávila Ops",
+      "read_time": "5 min",
+      "url": "https://example.com/noticias/automacao-editorial"
+    },
+    {
+      "category": "Dados",
+      "title": "Quando pgvector realmente ajuda uma newsletter",
+      "summary": "Busca semântica e detecção de matérias semelhantes são bons casos de uso; métricas transacionais continuam no banco relacional.",
+      "source": "Ávila Ops",
+      "read_time": "4 min",
+      "url": "https://example.com/noticias/pgvector"
+    }
+  ],
+  "all_news_url": "https://example.com/noticias",
+  "company_address": "Ávila Ops · Brasil",
+  "preferences_url": "https://example.com/preferencias",
+  "unsubscribe": "https://example.com/cancelar"
+}

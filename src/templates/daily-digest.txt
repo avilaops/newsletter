@@ -1,0 +1,17 @@
+ÁVILA OPS — {{edition_label}}
+
+{{headline}}
+Olá, {{recipient_name|default('leitor')}}. {{intro}}
+
+{% for article in articles %}
+{{article.category}} — {{article.title}}
+{{article.summary}}
+Fonte: {{article.source}} · {{article.read_time}}
+Leia: {{article.url}}
+
+{% endfor %}
+Todas as notícias: {{all_news_url}}
+
+{{company_address}}
+Preferências: {{preferences_url}}
+Cancelar inscrição: {{unsubscribe}}

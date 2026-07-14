@@ -1,0 +1,13 @@
+{
+  "preheader": "Mudança prioritária com possível impacto na operação de marketplaces.",
+  "category": "Marketplaces",
+  "title": "Nova ferramenta do Mercado Livre pode alterar o fluxo de pedidos",
+  "summary": "A plataforma anunciou uma mudança que merece revisão das integrações e rotinas operacionais atuais.",
+  "why_it_matters": "Equipes que automatizam pedidos, estoque e atendimento devem validar os novos campos e eventos antes de qualquer mudança em produção.",
+  "source": "Mercado Livre",
+  "published_at": "12 de julho de 2026, 14h30",
+  "url": "https://example.com/noticias/alerta-mercado-livre",
+  "company_address": "Ávila Ops · Brasil",
+  "preferences_url": "https://example.com/preferencias",
+  "unsubscribe": "https://example.com/cancelar"
+}

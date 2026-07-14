@@ -1,0 +1,27 @@
+{
+  "name": "avilaops-newsletters",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/render-previews.mjs",
+    "dev": "node --watch src/platform/server.mjs",
+    "start": "node src/platform/server.mjs",
+    "db:migrate": "node src/platform/migrate.mjs",
+    "worker": "node src/platform/run-worker.mjs",
+    "test": "node --test test/**/*.test.mjs",
+    "check": "node scripts/validate-templates.mjs && node --test test/**/*.test.mjs",
+    "validate": "node scripts/validate-templates.mjs",
+    "templates:plan": "node scripts/sync-mailersend-templates.mjs",
+    "templates:sync": "node scripts/sync-mailersend-templates.mjs --apply"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.0",
+    "fastify": "5.10.0",
+    "pg": "8.22.0",
+    "zod": "4.4.3"
+  }
+}

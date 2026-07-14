@@ -1,0 +1,19 @@
+# Secrets and local configuration
+env
+.env
+.env.*
+!.env.example
+
+# Generated previews
+previews/
+
+# Node tooling
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
